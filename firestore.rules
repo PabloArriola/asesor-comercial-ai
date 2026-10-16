@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+
+    function isValidLead(data) {
+      return data.keys().hasAll(['name', 'phone', 'email', 'date', 'conversation']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 50 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.date is string && data.date.size() <= 100 &&
+             data.conversation is list && data.conversation.size() <= 1000 &&
+             (data.conversation.size() == 0 || data.conversation[0] is map);
+    }
+
+    match /tenants/{tenantId}/config/{configId} {
+      allow read: if true; // Public can read widget config
+      allow write: if isValidId(configId) && (isSignedIn() || tenantId != '');
+    }
+
+    match /tenants/{tenantId}/leads/{leadId} {
+      allow read: if true; // Client Dashboard and Admin can read tenant leads
+      allow create, update: if isValidId(leadId); // Widget can create and update conversation
+      allow delete: if isSignedIn();
+    }
+
+    // Central fallback config for public widget and demo mode
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isValidId(configId);
+    }
+    match /leads/{leadId} {
+      allow read: if isSignedIn();
+      allow create: if isValidId(leadId);
+      allow update, delete: if isSignedIn();
+    }
+  }
+}
+
+

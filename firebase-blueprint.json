@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "ChatbotConfig": {
+      "title": "ChatbotConfig",
+      "description": "Configuration for the chatbot agent",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "welcomeMessage": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "systemPrompt": { "type": "string" },
+        "knowledgeBase": { "type": "string" }
+      },
+      "required": ["name", "welcomeMessage", "primaryColor", "systemPrompt", "knowledgeBase"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "A captured lead from the chat",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "conversation": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "role": { "type": "string" },
+              "content": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["name", "phone", "email", "date"]
+    }
+  },
+  "firestore": {
+    "/config/{configId}": {
+      "schema": { "$ref": "ChatbotConfig" },
+      "description": "Stores the central configuration for the chatbot. Typically configId is 'main'."
+    },
+    "/leads/{leadId}": {
+      "schema": { "$ref": "Lead" },
+      "description": "Stores leads captured through the chatbot form."
+    }
+  }
+}

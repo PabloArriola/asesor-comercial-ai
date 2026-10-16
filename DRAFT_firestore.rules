@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    function isSignedIn() { return request.auth != null; }
+    function isAdmin() { 
+      return isSignedIn() && 
+             request.auth.token.email_verified == true && 
+             request.auth.token.email == 'Arriolapablo.a@gmail.com'; 
+    }
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidConfig(data) {
+      return data.keys().hasAll(['name', 'welcomeMessage', 'primaryColor', 'systemPrompt', 'knowledgeBase']) &&
+             data.keys().size() <= 6 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.welcomeMessage is string && data.welcomeMessage.size() <= 1000 &&
+             data.primaryColor is string && data.primaryColor.size() <= 20 &&
+             data.systemPrompt is string && data.systemPrompt.size() <= 10000 &&
+             data.knowledgeBase is string && data.knowledgeBase.size() <= 50000;
+    }
+
+    function isValidLead(data) {
+      return data.keys().hasAll(['name', 'phone', 'email', 'date', 'conversation']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 50 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.date is string && data.date.size() <= 100 &&
+             data.conversation is list && data.conversation.size() <= 1000;
+    }
+
+    match /config/{configId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(configId) && isValidConfig(incoming());
+      allow update: if isAdmin() && isValidId(configId) && isValidConfig(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'welcomeMessage', 'primaryColor', 'systemPrompt', 'knowledgeBase'])
+      );
+    }
+
+    match /leads/{leadId} {
+      allow read: if isAdmin();
+      allow create: if isValidId(leadId) && isValidLead(incoming());
+      allow update: if isAdmin() && isValidId(leadId) && isValidLead(incoming());
+      allow delete: if isAdmin();
+    }
+  }
+}

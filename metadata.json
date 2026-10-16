@@ -1,0 +1,6 @@
+{
+  "name": "Asesor Comercial AI",
+  "description": "Un agente experto que recomienda productos del catálogo, cualifica a los clientes para cierre y recopila sus datos de contacto (Email, WhatsApp).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
