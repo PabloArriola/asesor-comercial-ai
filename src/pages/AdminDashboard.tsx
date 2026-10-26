@@ -20,6 +20,8 @@ export default function AdminDashboard() {
   const [isScraping, setIsScraping] = useState(false);
   const [manualSourceTitle, setManualSourceTitle] = useState('');
   const [manualSourceContent, setManualSourceContent] = useState('');
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [uploadDocStatus, setUploadDocStatus] = useState('');
 
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [webhookTestResult, setWebhookTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -348,6 +350,7 @@ export default function AdminDashboard() {
     { id: 'sources', label: 'Fuentes de Datos', icon: Database },
     { id: 'customize', label: 'Personalización', icon: Palette },
     { id: 'webhooks', label: 'Notificaciones & Webhooks', icon: Bell },
+    { id: 'whatsapp', label: 'Conexión WhatsApp', icon: Phone },
     { id: 'prompt', label: 'Instrucciones Base', icon: TerminalSquare },
     { id: 'deploy', label: 'Desplegar Widget', icon: ExternalLink },
   ];
@@ -400,11 +403,67 @@ export default function AdminDashboard() {
   
   const chartData = getChartData();
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type === "text/plain" || file.name.endsWith(".txt")) {
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const isText = file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".csv") || file.name.endsWith(".md");
+
+    if (isPdf) {
+      setIsUploadingDoc(true);
+      setUploadDocStatus("Leyendo PDF y extrayendo especificaciones técnicas con IA...");
+      try {
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          try {
+            const base64Data = event.target?.result as string;
+            setUploadDocStatus("Gemini está analizando modelos, precios y tablas del documento...");
+            const response = await fetch('/api/parse-document', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                base64: base64Data,
+                filename: file.name,
+                mimeType: file.type || 'application/pdf'
+              })
+            });
+
+            if (!response.ok) {
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(errData.error || 'Error al procesar el archivo PDF');
+            }
+
+            const data = await response.json();
+            const newSource = {
+              id: Date.now().toString(),
+              type: 'file' as const,
+              title: data.title || file.name,
+              content: data.content
+            };
+            const newSources = [...(config.dataSources || []), newSource];
+            const newConfig = { ...config, dataSources: newSources };
+            updateConfig('dataSources', newSources as any);
+            await saveConfig(newConfig);
+            showNotice("¡PDF indexado con éxito! El bot aprendió todos sus modelos y precios.");
+          } catch (err: any) {
+            console.error("PDF upload error:", err);
+            alert("Error al procesar el PDF: " + (err.message || 'Inténtalo de nuevo.'));
+          } finally {
+            setIsUploadingDoc(false);
+            setUploadDocStatus('');
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (err: any) {
+        setIsUploadingDoc(false);
+        setUploadDocStatus('');
+        alert("Error al leer el archivo: " + err.message);
+      }
+      return;
+    }
+
+    if (isText) {
       const reader = new FileReader();
       reader.onload = async (event) => {
         const text = event.target?.result as string;
@@ -420,16 +479,17 @@ export default function AdminDashboard() {
           updateConfig('dataSources', newSources as any);
           try {
             await saveConfig(newConfig);
-            showNotice("Archivo cargado y guardado en la base de datos.");
+            showNotice("Archivo de texto cargado y guardado en la base de datos.");
           } catch {
             showNotice("Archivo cargado y guardado localmente.");
           }
         }
       };
       reader.readAsText(file);
-    } else {
-      alert("Por el momento, se admiten archivos .txt de texto plano.");
+      return;
     }
+
+    alert("Formato no compatible. Sube archivos .pdf, .txt, .csv o .md.");
   };
 
   const handleScrape = async () => {
@@ -2210,6 +2270,157 @@ export default function AdminDashboard() {
                           🔒 <em>El <code className="font-mono">tenant_id</code> se inyecta programáticamente por código en el backend.</em>
                         </li>
                       </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+                        {activeTab === 'whatsapp' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                      <span className="w-3 h-3 bg-[#25D366] rounded-full inline-block animate-pulse"></span>
+                      Conexión Directa a WhatsApp
+                    </h2>
+                    <p className="text-slate-500 mt-1 text-sm leading-relaxed max-w-2xl">
+                      Permite que tus clientes salten directamente a WhatsApp con el asesor adecuado tras calificar el lead, o automatiza respuestas 24/7 conectando tu webhook.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSave}
+                    disabled={saveIndicator}
+                    className="self-start sm:self-auto bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-emerald-700 shadow-md transition-all flex items-center gap-2"
+                  >
+                    {saveIndicator ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+                    <span>{saveIndicator ? '¡Guardado!' : 'Guardar Ajustes'}</span>
+                  </button>
+                </div>
+
+                {/* Section 1: Botón en el Widget */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div>
+                      <h3 className="font-semibold text-slate-800 text-base">Botón directo de WhatsApp en el Chat</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Muestra un botón verde de WhatsApp en la cabecera y tras la calificación del lead.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={config.whatsappEnabled !== false} 
+                        onChange={(e) => updateConfig('whatsappEnabled', e.target.checked)}
+                        className="sr-only peer" 
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#25D366]"></div>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                        WhatsApp General / Central
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej: +5493624000000"
+                        value={config.whatsappNumber || ''}
+                        onChange={(e) => updateConfig('whatsappNumber', e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all shadow-inner"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">Con código de país y área (sin espacios ni guiones).</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                        WhatsApp Sucursal Resistencia
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej: +5493624111111"
+                        value={config.whatsappResistencia || ''}
+                        onChange={(e) => updateConfig('whatsappResistencia', e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all shadow-inner"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">Se usará cuando el cliente indique Resistencia.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                        WhatsApp Sucursal Posadas
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej: +5493764222222"
+                        value={config.whatsappPosadas || ''}
+                        onChange={(e) => updateConfig('whatsappPosadas', e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all shadow-inner"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">Se usará cuando el cliente indique Posadas.</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                      Mensaje precargado al abrir WhatsApp
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="¡Hola! Estuve conversando con el asesor virtual y me gustaría cotizar una embarcación."
+                      value={config.whatsappDefaultMessage || ''}
+                      onChange={(e) => updateConfig('whatsappDefaultMessage', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                {/* Section 2: Webhook para atención automática por WhatsApp */}
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-6 shadow-xl space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base text-white">Bot Automatizado 24/7 en WhatsApp (n8n & Meta API)</h3>
+                      <p className="text-xs text-slate-300">Responde consultas de WhatsApp directamente con este asesor y tu base de datos.</p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Si tienes un workflow en <span className="font-semibold text-emerald-400">n8n</span>, Evolution API o Meta Cloud API, puedes configurar este endpoint para que la IA responda a tus clientes de WhatsApp con la misma base de conocimiento:
+                  </p>
+
+                  <div className="bg-black/40 border border-white/10 rounded-xl p-4 space-y-3 font-mono text-xs">
+                    <div>
+                      <span className="text-slate-400 block mb-1">Webhook URL (POST / GET):</span>
+                      <div className="flex items-center justify-between bg-black/60 px-3 py-2 rounded-lg text-emerald-300 select-all overflow-x-auto">
+                        <span>https://asesor-comercial-ai.vercel.app/api/whatsapp</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText('https://asesor-comercial-ai.vercel.app/api/whatsapp');
+                            showNotice("¡URL copiada al portapapeles!");
+                          }}
+                          className="ml-2 px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-white font-sans text-[11px] transition-colors shrink-0"
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block mb-1">Verify Token (Meta Cloud API):</span>
+                      <div className="flex items-center justify-between bg-black/60 px-3 py-2 rounded-lg text-amber-300 select-all">
+                        <span>asesor_nautico_verify_token</span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText('asesor_nautico_verify_token');
+                            showNotice("¡Verify token copiado!");
+                          }}
+                          className="ml-2 px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-white font-sans text-[11px] transition-colors shrink-0"
+                        >
+                          Copiar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

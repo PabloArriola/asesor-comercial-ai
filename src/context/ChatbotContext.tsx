@@ -26,6 +26,12 @@ export type ChatbotConfig = {
   customWebhookUrl?: string;
   logoUrl?: string;
   quickReplies?: string[];
+  whatsappEnabled?: boolean;
+  whatsappNumber?: string;
+  whatsappResistencia?: string;
+  whatsappPosadas?: string;
+  whatsappDefaultMessage?: string;
+  whatsappFloatingButton?: boolean;
 };
 
 export type Lead = {
@@ -136,6 +142,12 @@ const defaultConfig: ChatbotConfig = {
   n8nWebhookUrl: '',
   zapierWebhookUrl: '',
   customWebhookUrl: '',
+  whatsappEnabled: true,
+  whatsappNumber: '',
+  whatsappResistencia: '',
+  whatsappPosadas: '',
+  whatsappDefaultMessage: '¡Hola! Estuve conversando con el asesor virtual y me gustaría cotizar una embarcación.',
+  whatsappFloatingButton: true,
 };
 
 const LOCAL_STORAGE_CONFIG_KEY = 'nautic_chatbot_config';

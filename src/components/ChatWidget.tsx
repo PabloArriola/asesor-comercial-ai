@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Loader2, MessageSquare, X, ChevronDown, RotateCcw, ExternalLink } from 'lucide-react';
+import { Send, User, Bot, Loader2, MessageSquare, X, ChevronDown, RotateCcw, ExternalLink, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -20,6 +20,16 @@ export default function ChatWidget() {
   const [currentLeadId, setCurrentLeadId] = useState<string | null>(null);
   const [isHandoff, setIsHandoff] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const getWhatsAppLink = () => {
+    if (config.whatsappEnabled === false) return null;
+    const targetNumber = config.whatsappNumber || config.whatsappResistencia || config.whatsappPosadas || '';
+    const cleanNumber = targetNumber.replace(/\D/g, '');
+    if (!cleanNumber) return null;
+    const msg = encodeURIComponent(config.whatsappDefaultMessage || '¡Hola! Me gustaría cotizar y consultar detalles sobre una embarcación.');
+    return `https://wa.me/${cleanNumber}?text=${msg}`;
+  };
+  const waLink = getWhatsAppLink();
   const chatWindowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -264,6 +274,17 @@ export default function ChatWidget() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {waLink && (
+                  <a
+                    href={waLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-lg transition-all shadow-sm flex items-center gap-1 text-xs font-medium cursor-pointer mr-1"
+                    title="Hablar por WhatsApp con un asesor comercial"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                  </a>
+                )}
                 <button onClick={resetChat} className="p-1.5 hover:bg-white/20 rounded-md transition-colors text-white cursor-pointer" title="Reiniciar chat">
                   <RotateCcw className="w-4 h-4" />
                 </button>

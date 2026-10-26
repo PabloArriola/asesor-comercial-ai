@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Loader2, User, ExternalLink } from 'lucide-react';
+import { Send, Bot, Loader2, User, ExternalLink, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -14,6 +14,16 @@ export default function ChatStandalone() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const getWhatsAppLink = () => {
+    if (config.whatsappEnabled === false) return null;
+    const targetNumber = config.whatsappNumber || config.whatsappResistencia || config.whatsappPosadas || '';
+    const cleanNumber = targetNumber.replace(/\D/g, '');
+    if (!cleanNumber) return null;
+    const msg = encodeURIComponent(config.whatsappDefaultMessage || '¡Hola! Me gustaría cotizar y consultar detalles sobre una embarcación.');
+    return `https://wa.me/${cleanNumber}?text=${msg}`;
+  };
+  const waLink = getWhatsAppLink();
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -235,7 +245,20 @@ export default function ChatStandalone() {
             </motion.div>
           )}
         </AnimatePresence>
-        <div ref={messagesEndRef} />
+        {waLink && messages.length > 2 && (
+            <div className="flex justify-center my-3">
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5"
+              >
+                <Phone className="w-4 h-4" />
+                <span>Continuar atención por WhatsApp 📲</span>
+              </a>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
       </div>
 
       <div className="p-3 bg-white border-t border-slate-100 shrink-0">

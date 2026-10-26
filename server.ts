@@ -84,11 +84,65 @@ async function startServer() {
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: "25mb" }));
+  app.use(express.urlencoded({ limit: "25mb", extended: true }));
 
   // API health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+
+  // API Route for PDF and document parsing with Gemini
+  app.post("/api/parse-document", async (req, res) => {
+    try {
+      const { base64, filename, mimeType, textContent } = req.body || {};
+      if (!filename) {
+        return res.status(400).json({ error: "Falta el nombre del archivo (filename)." });
+      }
+      if (textContent && typeof textContent === "string" && textContent.trim()) {
+        return res.json({
+          success: true,
+          title: filename,
+          content: textContent.trim()
+        });
+      }
+      if (!base64) {
+        return res.status(400).json({ error: "Se requiere contenido base64 o textContent." });
+      }
+      const cleanBase64 = base64.replace(/^data:[^;]+;base64,/, "");
+      const actualMime = mimeType || "application/pdf";
+      const ai = getAi();
+      const prompt = `Eres un extractor experto de bases de conocimiento para un asistente comercial de ventas.
+Analiza este documento completo ("${filename}") y extrae toda la información relevante de forma ordenada y exhaustiva en formato Markdown.
+1. Extrae todas las especificaciones técnicas (embarcaciones, lanchas, motores, medidas, capacidades).
+2. Conserva listas de precios, cuotas, sistemas de financiación (Lancha Plan) y cotizaciones en tablas Markdown.
+3. Extrae sucursales, servicios y condiciones comerciales.
+4. NO resumas datos clave ni omitas precios o modelos.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{
+          role: "user",
+          parts: [
+            { inlineData: { data: cleanBase64, mimeType: actualMime } },
+            { text: prompt }
+          ]
+        }],
+        config: { temperature: 0.2 }
+      });
+      const extractedText = response.text || "";
+      return res.json({
+        success: true,
+        title: filename.replace(/\.[^/.]+$/, ""),
+        filename,
+        content: extractedText.trim(),
+        mimeType: actualMime
+      });
+    } catch (err) {
+      console.error("Parse document error:", err);
+      res.status(500).json({ error: err instanceof Error ? err.message : "Error al procesar documento." });
+    }
   });
 
   // API Route for chat with Gemini Function Calling
