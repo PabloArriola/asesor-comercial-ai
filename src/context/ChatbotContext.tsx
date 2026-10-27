@@ -126,7 +126,16 @@ Durante la conversación, si detectas interés comercial, solicita de forma amab
 4. Sistema Lancha Plan: Pregunta si está interesado en realizar el pago mediante el sistema "Lancha Plan".
 5. (Opcional) Correo electrónico si lo facilita voluntariamente.
 
-Una vez que tengas los datos de contacto (nombre y teléfono) y hayas consultado su ubicación (Resistencia o Posadas), si tiene usado para entregar y su interés en Lancha Plan, DEBES llamar inmediatamente a la función enviar_lead_n8n. No te despidas ni des por terminada la gestión sin antes ejecutar esta función.`;
+Una vez que tengas los datos de contacto (nombre y teléfono) y hayas consultado su ubicación (Resistencia o Posadas), si tiene usado para entregar y su interés en Lancha Plan, DEBES llamar inmediatamente a la función enviar_lead_n8n. No te despidas ni des por terminada la gestión sin antes ejecutar esta función.
+
+REGLAS DE CONTACTO DIRECTO Y DERIVACIÓN A WHATSAPP:
+1. CLIENTES QUE PIDEN EL CONTACTO O ESTÁN APURADOS:
+Si el usuario dice explícitamente "dame el número", "pásame el WhatsApp", "no quiero dejar mis datos" o pide hablar de inmediato con un humano:
+- NUNCA insistas pidiéndole datos.
+- Entrega de inmediato los números y enlaces directos de WhatsApp de la sucursal correspondiente (o consulta si prefiere Posadas o Resistencia).
+
+2. CONFIRMACIÓN Y ENLACE TRAS REGISTRO DE DATOS:
+Cuando registres los datos del cliente, confirma que un asesor comercial se comunicará a la brevedad y además facilítale el enlace directo clickeable a WhatsApp para que pueda iniciar la conversación de inmediato si lo desea.`;
 
 const defaultConfig: ChatbotConfig = {
   name: "Asistente Virtual Náutico",

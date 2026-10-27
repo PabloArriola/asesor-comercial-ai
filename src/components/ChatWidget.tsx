@@ -130,7 +130,13 @@ export default function ChatWidget() {
         config.systemPrompt, 
         fullKnowledgeBase,
         tenantId,
-        config.webhookUrl
+        config.webhookUrl,
+        {
+          whatsappNumber: config.whatsappNumber,
+          whatsappResistencia: config.whatsappResistencia,
+          whatsappPosadas: config.whatsappPosadas,
+          whatsappDefaultMessage: config.whatsappDefaultMessage
+        }
       );
       
       let finalCleanResponse = result.text;

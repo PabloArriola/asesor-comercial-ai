@@ -88,7 +88,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { history, message, systemPrompt, knowledgeBase, tenantId, webhookUrl } = req.body || {};
+    const { history, message, systemPrompt, knowledgeBase, tenantId, webhookUrl, whatsappConfig } = req.body || {};
 
     const rawSystemInstruction = systemPrompt || "Eres un asesor comercial náutico experto, amable y profesional.";
     const baseKnowledge = knowledgeBase 
@@ -102,6 +102,37 @@ export default async function handler(req: any, res: any) {
         m.content?.includes('Un asesor comercial se pondrá en contacto')
       )
     );
+
+    
+    const waGeneral = ((whatsappConfig && whatsappConfig.whatsappNumber) || '').replace(/\D/g, '') || '5493624000000';
+    const waResistencia = ((whatsappConfig && whatsappConfig.whatsappResistencia) || '').replace(/\D/g, '') || waGeneral;
+    const waPosadas = ((whatsappConfig && whatsappConfig.whatsappPosadas) || '').replace(/\D/g, '') || waGeneral;
+    const waDefaultMsg = encodeURIComponent((whatsappConfig && whatsappConfig.whatsappDefaultMessage) || '¡Hola! Quisiera consultar y cotizar sobre una embarcación.');
+
+    const waLinkResistencia = `https://wa.me/${waResistencia}?text=${waDefaultMsg}`;
+    const waLinkPosadas = `https://wa.me/${waPosadas}?text=${waDefaultMsg}`;
+    const waLinkGeneral = `https://wa.me/${waGeneral}?text=${waDefaultMsg}`;
+
+    const whatsappProtocolInstruction = `\n\nREGLAS DE CONTACTO DIRECTO Y DERIVACIÓN A WHATSAPP:
+1. CLIENTES QUE PIDEN EL CONTACTO O ESTÁN APURADOS:
+Si el usuario dice explícitamente "dame el número", "pásame el WhatsApp", "no quiero dar mis datos", "quiero hablar ya con alguien" o solicita contacto directo sin pasar por el formulario:
+- NUNCA insistas pidiéndole datos ni entres en un bucle repetitivo.
+- Ofrécele inmediatamente los enlaces directos de WhatsApp en formato Markdown clickeable:
+  - Si indicó que es de Posadas:
+    👉 [Escribir al WhatsApp de Sucursal Posadas](${waLinkPosadas}) (Tel: +${waPosadas})
+  - Si indicó que es de Resistencia:
+    👉 [Escribir al WhatsApp de Sucursal Resistencia](${waLinkResistencia}) (Tel: +${waResistencia})
+  - Si aún no indicó sucursal, ofrécele ambas opciones para que elija sucursal:
+    👉 [Escribir al WhatsApp de Sucursal Posadas](${waLinkPosadas})
+    👉 [Escribir al WhatsApp de Sucursal Resistencia](${waLinkResistencia})
+
+2. CONFIRMACIÓN Y ENLACE DIRECTO TRAS REGISTRO DE DATOS:
+Cuando el usuario te facilite sus datos y se ejecute la función enviar_lead_n8n:
+- Agradécele con calidez e infórmale que un asesor comercial se pondrá en contacto a la brevedad a su teléfono.
+- ADEMÁS, incluye SIEMPRE al final de tu mensaje el enlace directo clickeable en Markdown para que el cliente pueda abrir el chat de WhatsApp de inmediato si lo desea:
+  - Si es de Posadas: 👉 [Abrir WhatsApp con Asesor de Sucursal Posadas](${waLinkPosadas})
+  - Si es de Resistencia: 👉 [Abrir WhatsApp con Asesor de Sucursal Resistencia](${waLinkResistencia})
+  - Si es de otra ciudad o no especificó: 👉 [Abrir WhatsApp con Asesor Comercial](${waLinkGeneral})`;
 
     const leadRuleInstruction = leadAlreadyCaptured
       ? `\n\n[ESTADO DE SESIÓN]: Los datos del cliente ya fueron capturados y enviados con éxito en esta conversación. NO vuelvas a invocar la función \`enviar_lead_n8n\`. Continúa respondiendo normalmente y con calidez a las preguntas del usuario.`
@@ -119,7 +150,7 @@ PAUTAS DE CONVERSACIÓN:
 
     const legacyXmlInstruction = `\n\nSi por alguna razón la herramienta no se ejecutara pero el usuario proporcionó sus datos, adjunta al final <LEAD>{"name":"...","phone":"...","email":"...","ubicacion":"...","tiene_usado":"...","interesa_lanchaplan":"..."}</LEAD>.`;
     
-    const finalSystemInstruction = rawSystemInstruction + baseKnowledge + leadRuleInstruction + legacyXmlInstruction;
+    const finalSystemInstruction = rawSystemInstruction + baseKnowledge + leadRuleInstruction + whatsappProtocolInstruction + legacyXmlInstruction;
 
     const ai = getAi();
 
@@ -276,6 +307,7 @@ PAUTAS DE CONVERSACIÓN:
           }
         }
 
+                // If the model paused with function call and left text empty, request friendly wrap-up or use fallback
         if (!replyText || replyText.trim() === '') {
           try {
             const candidateContent = response.candidates?.[0]?.content;
@@ -312,7 +344,12 @@ PAUTAS DE CONVERSACIÓN:
             const ubicStr = args.ubicacion ? ` desde ${args.ubicacion}` : '';
             const usadoStr = args.tiene_usado ? ` (Usado: ${args.tiene_usado})` : '';
             const planStr = args.interesa_lanchaplan ? ` (Lancha Plan: ${args.interesa_lanchaplan})` : '';
-            replyText = `¡Muchas gracias${nombreStr}! Registré tu consulta${ubicStr}${usadoStr}${planStr}. Un asesor comercial se pondrá en contacto a la brevedad al teléfono ${args.telefono || ''} para brindarte toda la información y cotización detallada. ¿Te gustaría consultar algo más mientras tanto?`;
+
+            const rawU = (args.ubicacion || '').toLowerCase();
+            const directLink = rawU.includes('posadas') ? waLinkPosadas : (rawU.includes('resistencia') ? waLinkResistencia : waLinkGeneral);
+            const sucName = rawU.includes('posadas') ? 'Posadas' : (rawU.includes('resistencia') ? 'Resistencia' : 'Ventas');
+
+            replyText = `¡Muchas gracias${nombreStr}! Registré tu consulta${ubicStr}${usadoStr}${planStr}. Un asesor comercial se pondrá en contacto a la brevedad al teléfono ${args.telefono || ''} para brindarte toda la información y cotización detallada.\n\nSi prefieres escribirnos tú mismo de inmediato, haz clic aquí:\n👉 [Abrir WhatsApp con Asesor de ${sucName}](${directLink})`;
           }
         }
       }

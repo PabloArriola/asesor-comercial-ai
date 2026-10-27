@@ -58,7 +58,13 @@ export default function ChatStandalone() {
         config.systemPrompt, 
         fullKnowledgeBase,
         tenantId,
-        config.webhookUrl
+        config.webhookUrl,
+        {
+          whatsappNumber: config.whatsappNumber,
+          whatsappResistencia: config.whatsappResistencia,
+          whatsappPosadas: config.whatsappPosadas,
+          whatsappDefaultMessage: config.whatsappDefaultMessage
+        }
       );
       
       let responseText = result.text;

@@ -24,13 +24,21 @@ export type SendMessageResult = {
   } | null;
 };
 
+export type WhatsAppConfigPayload = {
+  whatsappNumber?: string;
+  whatsappResistencia?: string;
+  whatsappPosadas?: string;
+  whatsappDefaultMessage?: string;
+};
+
 export async function sendMessage(
   history: ChatMessage[], 
   message: string, 
   systemPrompt?: string, 
   knowledgeBase?: string,
   tenantId?: string | null,
-  webhookUrl?: string | null
+  webhookUrl?: string | null,
+  whatsappConfig?: WhatsAppConfigPayload
 ): Promise<SendMessageResult> {
   try {
     const response = await fetch('/api/chat', {
@@ -44,7 +52,8 @@ export async function sendMessage(
         systemPrompt,
         knowledgeBase,
         tenantId,
-        webhookUrl
+        webhookUrl,
+        whatsappConfig
       }),
     });
 
@@ -63,4 +72,3 @@ export async function sendMessage(
     throw error;
   }
 }
-
