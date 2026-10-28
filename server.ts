@@ -376,50 +376,18 @@ PAUTAS DE CONVERSACIÓN:
             }
           }
 
-                  // If the model paused with function call and left text empty, request friendly wrap-up or use fallback
+                  // Immediate structured response with WhatsApp direct link upon lead capture (super-fast, avoids timeouts)
         if (!replyText || replyText.trim() === '') {
-          try {
-            const candidateContent = response.candidates?.[0]?.content;
-            if (candidateContent) {
-              const followUpResponse = await ai.models.generateContent({
-                model: usedModel,
-                contents: [
-                  ...contents,
-                  candidateContent,
-                  {
-                    role: 'user',
-                    parts: [{
-                      functionResponse: {
-                        name: 'enviar_lead_n8n',
-                        response: { status: 'success', message: 'Lead enviado correctamente al CRM y notificado vía webhook.' }
-                      }
-                    }]
-                  }
-                ],
-                config: {
-                  systemInstruction: finalSystemInstruction,
-                  temperature: 0.7,
-                  tools: [{ functionDeclarations: [enviarLeadN8nDeclaration] }]
-                }
-              });
-              replyText = followUpResponse.text || "";
-            }
-          } catch (followUpErr) {
-            console.warn("Follow-up response error (using friendly fallback):", followUpErr);
-          }
+          const nombreStr = args.nombre ? ` ${args.nombre}` : '';
+          const ubicStr = args.ubicacion ? ` desde ${args.ubicacion}` : '';
+          const usadoStr = args.tiene_usado ? ` (Usado: ${args.tiene_usado})` : '';
+          const planStr = args.interesa_lanchaplan ? ` (Lancha Plan: ${args.interesa_lanchaplan})` : '';
 
-          if (!replyText || replyText.trim() === '') {
-            const nombreStr = args.nombre ? ` ${args.nombre}` : '';
-            const ubicStr = args.ubicacion ? ` desde ${args.ubicacion}` : '';
-            const usadoStr = args.tiene_usado ? ` (Usado: ${args.tiene_usado})` : '';
-            const planStr = args.interesa_lanchaplan ? ` (Lancha Plan: ${args.interesa_lanchaplan})` : '';
+          const rawU = (args.ubicacion || '').toLowerCase();
+          const directLink = rawU.includes('posadas') ? waLinkPosadas : (rawU.includes('resistencia') ? waLinkResistencia : waLinkGeneral);
+          const sucName = rawU.includes('posadas') ? 'Posadas' : (rawU.includes('resistencia') ? 'Resistencia' : 'Ventas');
 
-            const rawU = (args.ubicacion || '').toLowerCase();
-            const directLink = rawU.includes('posadas') ? waLinkPosadas : (rawU.includes('resistencia') ? waLinkResistencia : waLinkGeneral);
-            const sucName = rawU.includes('posadas') ? 'Posadas' : (rawU.includes('resistencia') ? 'Resistencia' : 'Ventas');
-
-            replyText = `¡Muchas gracias${nombreStr}! Registré tu consulta${ubicStr}${usadoStr}${planStr}. Un asesor comercial se pondrá en contacto a la brevedad al teléfono ${args.telefono || ''} para brindarte toda la información y cotización detallada.\n\nSi prefieres escribirnos tú mismo de inmediato, haz clic aquí:\n👉 [Abrir WhatsApp con Asesor de ${sucName}](${directLink})`;
-          }
+          replyText = `¡Muchas gracias${nombreStr}! Registré tu consulta${ubicStr}${usadoStr}${planStr}. Un asesor comercial se pondrá en contacto a la brevedad al teléfono ${args.telefono || ''} para brindarte toda la información y cotización detallada.\n\nSi prefieres escribirnos tú mismo de inmediato para atención instantánea, haz clic aquí:\n👉 [Abrir WhatsApp con Asesor de ${sucName}](${directLink})`;
         }
       }
     }

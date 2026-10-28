@@ -189,9 +189,13 @@ export default function ChatWidget() {
       setMessages(prev => [...prev, { role: 'model', content: finalCleanResponse }]);
     } catch (error) {
       console.error("Error sending message:", error);
+      const fallbackWa = getWhatsAppLink();
+      const errorMsg = fallbackWa
+        ? 'Disculpa, hubo una pequeña demora en la respuesta. Puedes volver a enviar tu consulta o escribirnos directamente:\n\n👉 [Abrir WhatsApp](' + fallbackWa + ')'
+        : 'Disculpa, hubo una pequeña demora en la conexión. Por favor intenta de nuevo.';
       setMessages(prev => [
         ...prev, 
-        { role: 'model', content: 'Lo siento, he perdido temporalmente la conexión con cubierta. Inténtalo de nuevo.' }
+        { role: 'model', content: errorMsg }
       ]);
     } finally {
       setIsLoading(false);
