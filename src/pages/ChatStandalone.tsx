@@ -138,9 +138,208 @@ export default function ChatStandalone() {
     await executeSendMessage(userMsg);
   };
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const themeParam = searchParams.get('theme')?.toLowerCase();
+  const isNauticaTheme = themeParam === 'nautica' || themeParam === 'dark' || (tenantId === 'RHTdvIML8DSz4HkJQVUeOucu5ih2' && themeParam !== 'light');
+
   const activeQuickReplies = (config.quickReplies && config.quickReplies.length > 0)
     ? config.quickReplies.filter(r => r && r.trim() !== '')
     : defaultQuickReplies;
+
+  if (isNauticaTheme) {
+    return (
+      <div 
+        className="w-full h-screen flex flex-col bg-[#070d17] text-[#f0f4f8] overflow-hidden shadow-2xl font-sans"
+        style={{ borderRadius: '16px', border: '1px solid rgba(232, 123, 32, 0.3)' }}
+      >
+        {/* Header Náutica Luxury Dark */}
+        <div 
+          className="px-4 py-3.5 flex items-center justify-between text-white shrink-0 relative"
+          style={{
+            background: 'linear-gradient(135deg, #091322 0%, #102138 100%)',
+            borderBottom: '1.5px solid rgba(232, 123, 32, 0.65)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 16px rgba(232, 123, 32, 0.15)'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md overflow-hidden border border-white/20 p-1 shrink-0">
+              {config.logoUrl ? (
+                <img src={config.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+              ) : (
+                <Bot className="w-5 h-5 text-[#e87b20]" />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm tracking-wide text-white drop-shadow-xs">
+                  {config.name || 'Asistente Virtual'}
+                </h3>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-[#e87b20]/25 text-[#e87b20] border border-[#e87b20]/45">
+                  AI
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></span>
+                <p className="text-xs text-slate-300 font-medium">En línea, listo para zarpar</p>
+              </div>
+            </div>
+          </div>
+          {waLink && (
+            <a
+              href={waLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all hover:scale-105 active:scale-95 border border-emerald-400/30"
+              title="Continuar por WhatsApp"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </a>
+          )}
+        </div>
+
+        {/* Lista de Mensajes */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#070d17] scroll-smooth">
+          <AnimatePresence initial={false}>
+            {messages.map((msg, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex items-end gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+              >
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-sm ${
+                  msg.role === 'user' 
+                    ? 'bg-[#e87b20]/20 text-[#e87b20] border border-[#e87b20]/40' 
+                    : 'bg-white p-0.5 border border-white/25'
+                }`}>
+                  {msg.role === 'user' ? (
+                    <User className="w-4 h-4" />
+                  ) : config.logoUrl ? (
+                    <img src={config.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                  ) : (
+                    <Bot className="w-4 h-4 text-[#e87b20]" />
+                  )}
+                </div>
+
+                <div 
+                  className={`max-w-[85%] rounded-2xl p-3.5 text-sm shadow-md ${
+                    msg.role === 'user' 
+                      ? 'bg-gradient-to-r from-[#e87b20] to-[#d66b15] text-white rounded-br-xs shadow-orange-950/30' 
+                      : 'bg-[#0f1b2d] border border-white/10 text-[#f0f4f8] rounded-bl-xs shadow-black/40'
+                  }`}
+                >
+                  <div className={`prose prose-sm break-words max-w-none ${
+                    msg.role === 'user' 
+                      ? 'text-white prose-p:text-white font-medium' 
+                      : 'prose-invert text-slate-100 prose-p:leading-relaxed'
+                  } prose-img:rounded-xl prose-img:shadow-md prose-img:max-w-full prose-video:rounded-xl prose-video:shadow-md prose-video:max-w-full`}>
+                    <Markdown 
+                      rehypePlugins={[rehypeRaw]}
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ href, children, ...props }) => (
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (href) {
+                                window.open(href, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 font-semibold underline text-[#5aadcf] hover:text-[#e87b20] break-words cursor-pointer bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded border border-white/15 transition-colors my-0.5"
+                            {...props}
+                          >
+                            <span>{children}</span>
+                            <ExternalLink className="w-3.5 h-3.5 inline shrink-0 opacity-80" />
+                          </a>
+                        )
+                      }}
+                    >
+                      {DOMPurify.sanitize(msg.content, { 
+                        ADD_TAGS: ['iframe'], 
+                        ADD_ATTR: ['target', 'rel', 'allow', 'allowfullscreen', 'frameborder', 'scrolling'] 
+                      })}
+                    </Markdown>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Chips de Respuestas Rápidas Náuticas */}
+            {messages.length === 1 && activeQuickReplies.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col gap-2 pl-9 pr-2"
+              >
+                {activeQuickReplies.map((reply, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => executeSendMessage(reply)}
+                    className="text-left px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 active:scale-[0.99] cursor-pointer flex items-center justify-between group bg-[#0d1829] border border-[#e87b20]/40 text-[#f0f4f8] hover:bg-[#e87b20]/15 hover:border-[#e87b20] hover:shadow-[0_0_15px_rgba(232,123,32,0.25)]"
+                  >
+                    <span>{reply}</span>
+                    <span className="text-[#e87b20] opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold">→</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-2 text-slate-400 text-xs p-2 pl-9"
+              >
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#e87b20]" />
+                <span>Asesor náutico escribiendo...</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {waLink && messages.length > 2 && (
+            <div className="flex justify-center my-3">
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-emerald-950/40 transition-all transform hover:-translate-y-0.5 border border-emerald-400/30"
+              >
+                <Phone className="w-4 h-4" />
+                <span>Continuar atención por WhatsApp 📲</span>
+              </a>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input Bar Náutica */}
+        <div className="p-3 bg-[#091322] border-t border-white/10 shrink-0">
+          <form onSubmit={handleSend} className="relative flex items-center">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Escribe tu consulta sobre lanchas, usados, planes..."
+              className="w-full pl-4 pr-12 py-3 bg-[#0f1b2d] border border-white/15 text-white placeholder-slate-400 rounded-xl focus:outline-none focus:border-[#e87b20] focus:ring-2 focus:ring-[#e87b20]/25 transition-all text-sm shadow-inner"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="absolute right-2 p-2 rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 bg-gradient-to-r from-[#e87b20] to-[#d66b15] shadow-sm hover:shadow-orange-900/40 cursor-pointer"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-screen flex flex-col bg-white overflow-hidden shadow-lg" style={{ borderRadius: '12px', border: '1px solid #e2e8f0' }}>
