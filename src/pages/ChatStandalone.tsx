@@ -120,11 +120,10 @@ export default function ChatStandalone() {
       setMessages(prev => [...prev, { role: 'model', content: responseText }]);
     } catch (err: any) {
       console.error("Chat error details:", err);
-      const fallbackWa = getWhatsAppLink();
-      const errorMsg = fallbackWa
-        ? 'Disculpa, hubo una pequeña demora en la respuesta. Puedes reintentar tu mensaje o comunicarte directamente haciendo clic aquí:\n\n👉 [Continuar por WhatsApp](' + fallbackWa + ')'
-        : 'Disculpa, hubo una pequeña demora en la conexión. Por favor reintenta tu mensaje.';
-      setMessages(prev => [...prev, { role: 'model', content: errorMsg }]);
+      setMessages(prev => [
+        ...prev, 
+        { role: 'model', content: 'Disculpa, hubo un inconveniente momentáneo de conexión al procesar tu respuesta. Por favor, intenta enviar tu mensaje nuevamente.' }
+      ]);
     } finally {
       setIsLoading(false);
     }

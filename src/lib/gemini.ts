@@ -40,28 +40,42 @@ export async function sendMessage(
   webhookUrl?: string | null,
   whatsappConfig?: WhatsAppConfigPayload
 ): Promise<SendMessageResult> {
-  try {
+  const payload = JSON.stringify({
+    history,
+    message,
+    systemPrompt,
+    knowledgeBase,
+    tenantId,
+    webhookUrl,
+    whatsappConfig
+  });
+
+  const doFetch = async () => {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        history,
-        message,
-        systemPrompt,
-        knowledgeBase,
-        tenantId,
-        webhookUrl,
-        whatsappConfig
-      }),
+      body: payload,
     });
 
     if (!response.ok) {
       throw new Error(`Error ${response.status}: ${await response.text()}`);
     }
 
-    const data = await response.json();
+    return await response.json();
+  };
+
+  try {
+    let data;
+    try {
+      data = await doFetch();
+    } catch (initialErr) {
+      console.warn("First request attempt had an issue, retrying in 1s...", initialErr);
+      await new Promise(res => setTimeout(res, 1000));
+      data = await doFetch();
+    }
+
     return {
       text: data.text || '',
       lead: data.lead || null,
